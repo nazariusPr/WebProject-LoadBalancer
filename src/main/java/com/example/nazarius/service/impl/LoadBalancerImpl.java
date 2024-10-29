@@ -1,5 +1,6 @@
 package com.example.nazarius.service.impl;
 
+import com.example.nazarius.service.BalancingAlgorithmService;
 import com.example.nazarius.service.LoadBalancerService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
@@ -20,49 +21,48 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 @AllArgsConstructor
 public class LoadBalancerImpl implements LoadBalancerService {
-    private final List<String> serverUrls;
-    private final RestTemplate restTemplate;
-    private final AtomicInteger counter = new AtomicInteger(0);
+  private final BalancingAlgorithmService balancingAlgorithmService;
+  private final RestTemplate restTemplate;
 
-    public ResponseEntity<?> forwardRequest(HttpServletRequest request, String body) {
-        HttpMethod method = getHttpMethod(request);
-        HttpHeaders headers = getHttpHeaders(request);
-        URI targetUri = getTargetUri(request);
+  public ResponseEntity<?> forwardRequest(HttpServletRequest request, String body) {
+    HttpMethod method = getHttpMethod(request);
+    HttpHeaders headers = getHttpHeaders(request);
+    URI targetUri = getTargetUri(request);
 
-        HttpEntity<Object> requestEntity =
-                (body == null || body.isEmpty())
-                        ? new HttpEntity<>(headers)
-                        : new HttpEntity<>(body, headers);
+    HttpEntity<Object> requestEntity =
+        (body == null || body.isEmpty())
+            ? new HttpEntity<>(headers)
+            : new HttpEntity<>(body, headers);
 
-        return restTemplate.exchange(targetUri, method, requestEntity, String.class);
+    return restTemplate.exchange(targetUri, method, requestEntity, String.class);
+  }
+
+  private HttpMethod getHttpMethod(HttpServletRequest request) {
+    return HttpMethod.valueOf(request.getMethod());
+  }
+
+  private HttpHeaders getHttpHeaders(HttpServletRequest request) {
+    HttpHeaders headers = new HttpHeaders();
+    Enumeration<String> headerNames = request.getHeaderNames();
+    while (headerNames.hasMoreElements()) {
+      String headerName = headerNames.nextElement();
+      headers.add(headerName, request.getHeader(headerName));
     }
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    return headers;
+  }
 
-    private HttpMethod getHttpMethod(HttpServletRequest request) {
-        return HttpMethod.valueOf(request.getMethod());
-    }
-
-    private HttpHeaders getHttpHeaders(HttpServletRequest request) {
-        HttpHeaders headers = new HttpHeaders();
-        Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String headerName = headerNames.nextElement();
-            headers.add(headerName, request.getHeader(headerName));
-        }
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return headers;
-    }
-
-    private URI getTargetUri(HttpServletRequest request) {
-        URI uri =
-                UriComponentsBuilder.fromHttpUrl(request.getRequestURL().toString())
-                        .query(request.getQueryString())
-                        .build()
-                        .toUri();
-        String targetUrl = serverUrls.get(counter.getAndIncrement() % serverUrls.size());
-        return UriComponentsBuilder.fromHttpUrl(targetUrl)
-                .path(uri.getPath())
-                .query(uri.getQuery())
-                .build()
-                .toUri();
-    }
+  private URI getTargetUri(HttpServletRequest request) {
+    URI uri =
+        UriComponentsBuilder.fromHttpUrl(request.getRequestURL().toString())
+            .query(request.getQueryString())
+            .build()
+            .toUri();
+    String targetUrl = balancingAlgorithmService.getServerUrl();
+    return UriComponentsBuilder.fromHttpUrl(targetUrl)
+        .path(uri.getPath())
+        .query(uri.getQuery())
+        .build()
+        .toUri();
+  }
 }

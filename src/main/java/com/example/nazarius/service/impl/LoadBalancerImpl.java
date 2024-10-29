@@ -48,7 +48,6 @@ public class LoadBalancerImpl implements LoadBalancerService {
       String headerName = headerNames.nextElement();
       headers.add(headerName, request.getHeader(headerName));
     }
-    headers.setContentType(MediaType.APPLICATION_JSON);
     return headers;
   }
 

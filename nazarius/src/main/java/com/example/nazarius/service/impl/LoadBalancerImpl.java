@@ -1,56 +1,92 @@
 package com.example.nazarius.service.impl;
 
 import com.example.nazarius.service.LoadBalancerService;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
+@AllArgsConstructor
 public class LoadBalancerImpl implements LoadBalancerService {
-    private final List<String> serverUrls = List.of("http://localhost:8081");
+    private final List<String> serverUrls;
+    private final RestTemplate restTemplate;
     private final AtomicInteger counter = new AtomicInteger(0);
 
-    public ResponseEntity<?> forwardRequest(HttpMethod method, URI uri, HttpHeaders headers, Object body) {
-        RestTemplate restTemplate = new RestTemplate();
+    public ResponseEntity<?> forwardRequest(HttpServletRequest request) {
+        HttpMethod method = getHttpMethod(request);
+        HttpHeaders headers = getHttpHeaders(request);
+        URI targetUri = getTargetUri(request);
+        String body = getHttpBody(request, method);
 
-        // Configure RestTemplate to not throw exceptions on 4xx/5xx responses
-        restTemplate.setErrorHandler(new ResponseErrorHandler() {
-            @Override
-            public boolean hasError(ClientHttpResponse response){
-                return false; // Treat all responses as non-errors
-            }
+        System.out.println("Forwarding request:");
+        System.out.println("Method: " + method);
+        System.out.println("Headers: " + headers);
+        System.out.println("Body: " + body);
 
-            @Override
-            public void handleError(ClientHttpResponse response){
-                // No-op: No handling needed since hasError is set to false
-            }
-        });
+        HttpEntity<Object> requestEntity =
+                (body == null || body.isEmpty())
+                        ? new HttpEntity<>(headers)
+                        : new HttpEntity<>(body, headers);
 
-        // Select server using round-robin
-        String targetUrl = serverUrls.get(counter.getAndIncrement() % serverUrls.size());
-        URI targetUri = UriComponentsBuilder.fromHttpUrl(targetUrl).path(uri.getPath()).query(uri.getQuery()).build().toUri();
-
-        System.out.println(targetUrl);
-        // Create HttpEntity based on presence of body
-        HttpEntity<Object> requestEntity = (body == null) ? new HttpEntity<>(headers) : new HttpEntity<>(body, headers);
-
-        // Forward request and get the response
-        ResponseEntity<?> response = restTemplate.exchange(targetUri, method, requestEntity, String.class);
-
-        System.out.println(response);
-
-        return response;
+        return restTemplate.exchange(targetUri, method, requestEntity, String.class);
     }
 
+    private HttpMethod getHttpMethod(HttpServletRequest request) {
+        return HttpMethod.valueOf(request.getMethod());
+    }
+
+    private HttpHeaders getHttpHeaders(HttpServletRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            headers.add(headerName, request.getHeader(headerName));
+        }
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
+    }
+
+    private URI getTargetUri(HttpServletRequest request) {
+        URI uri =
+                UriComponentsBuilder.fromHttpUrl(request.getRequestURL().toString())
+                        .query(request.getQueryString())
+                        .build()
+                        .toUri();
+        String targetUrl = serverUrls.get(counter.getAndIncrement() % serverUrls.size());
+        return UriComponentsBuilder.fromHttpUrl(targetUrl)
+                .path(uri.getPath())
+                .query(uri.getQuery())
+                .build()
+                .toUri();
+    }
+
+    private String getHttpBody(HttpServletRequest request, HttpMethod method) {
+        if (method == HttpMethod.POST || method == HttpMethod.PUT || method == HttpMethod.PATCH) {
+            StringBuilder body = new StringBuilder();
+            try (BufferedReader reader = request.getReader()) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    body.append(line);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return body.toString();
+        }
+        return null;
+    }
 }

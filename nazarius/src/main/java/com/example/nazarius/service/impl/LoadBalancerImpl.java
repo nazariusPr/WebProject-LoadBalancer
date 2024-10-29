@@ -12,8 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.net.URI;
 import java.util.Enumeration;
 import java.util.List;
@@ -26,16 +24,10 @@ public class LoadBalancerImpl implements LoadBalancerService {
     private final RestTemplate restTemplate;
     private final AtomicInteger counter = new AtomicInteger(0);
 
-    public ResponseEntity<?> forwardRequest(HttpServletRequest request) {
+    public ResponseEntity<?> forwardRequest(HttpServletRequest request, String body) {
         HttpMethod method = getHttpMethod(request);
         HttpHeaders headers = getHttpHeaders(request);
         URI targetUri = getTargetUri(request);
-        String body = getHttpBody(request, method);
-
-        System.out.println("Forwarding request:");
-        System.out.println("Method: " + method);
-        System.out.println("Headers: " + headers);
-        System.out.println("Body: " + body);
 
         HttpEntity<Object> requestEntity =
                 (body == null || body.isEmpty())
@@ -72,21 +64,5 @@ public class LoadBalancerImpl implements LoadBalancerService {
                 .query(uri.getQuery())
                 .build()
                 .toUri();
-    }
-
-    private String getHttpBody(HttpServletRequest request, HttpMethod method) {
-        if (method == HttpMethod.POST || method == HttpMethod.PUT || method == HttpMethod.PATCH) {
-            StringBuilder body = new StringBuilder();
-            try (BufferedReader reader = request.getReader()) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    body.append(line);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return body.toString();
-        }
-        return null;
     }
 }

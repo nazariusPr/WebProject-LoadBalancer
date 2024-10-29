@@ -1,8 +1,9 @@
 package com.example.nazarius.config;
 
+import static com.example.nazarius.constants.Server.SERVER_URLS;
+
 import com.example.nazarius.service.BalancingAlgorithmService;
 import com.example.nazarius.service.impl.RoundRobinImpl;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -42,12 +43,12 @@ public class LoadBalancerConfig {
 
   @Bean
   public BalancingAlgorithmService balancingAlgorithmService() {
-    return new RoundRobinImpl(List.of("http://localhost:8081"));
+    return new RoundRobinImpl(SERVER_URLS);
   }
 
   /*
   @Bean BalancingAlgorithmService balancingAlgorithmService(){
-      return new RandomSelectionImpl(List.of("http://localhost:8081"));
+      return new RandomSelectionImpl(SERVER_URLS);
   }
   */
 }

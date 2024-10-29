@@ -3,21 +3,19 @@ package com.example.nazarius.service.impl;
 import com.example.nazarius.service.BalancingAlgorithmService;
 import com.example.nazarius.service.LoadBalancerService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
+import java.util.Enumeration;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
+@Slf4j
 @Service
 @AllArgsConstructor
 public class LoadBalancerImpl implements LoadBalancerService {
@@ -58,6 +56,9 @@ public class LoadBalancerImpl implements LoadBalancerService {
             .build()
             .toUri();
     String targetUrl = balancingAlgorithmService.getServerUrl();
+
+    log.info("**/ Request sent to " + targetUrl);
+
     return UriComponentsBuilder.fromHttpUrl(targetUrl)
         .path(uri.getPath())
         .query(uri.getQuery())

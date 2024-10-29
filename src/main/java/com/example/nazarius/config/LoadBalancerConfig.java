@@ -1,5 +1,7 @@
 package com.example.nazarius.config;
 
+import com.example.nazarius.service.BalancingAlgorithmService;
+import com.example.nazarius.service.impl.RoundRobinImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -16,29 +18,31 @@ import java.util.List;
 @Configuration
 public class LoadBalancerConfig {
 
-    @Bean
-    public RestTemplate restTemplate() {
-        CloseableHttpClient httpClient = HttpClients.createDefault();
-        HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
+  @Bean
+  public RestTemplate restTemplate() {
+    CloseableHttpClient httpClient = HttpClients.createDefault();
+    HttpComponentsClientHttpRequestFactory requestFactory =
+        new HttpComponentsClientHttpRequestFactory(httpClient);
 
-        RestTemplate restTemplate = new RestTemplate(requestFactory);
-        restTemplate.setErrorHandler(new ResponseErrorHandler() {
-            @Override
-            public boolean hasError(ClientHttpResponse response) {
-                return false;
-            }
+    RestTemplate restTemplate = new RestTemplate(requestFactory);
+    restTemplate.setErrorHandler(
+        new ResponseErrorHandler() {
+          @Override
+          public boolean hasError(ClientHttpResponse response) {
+            return false;
+          }
 
-            @Override
-            public void handleError(ClientHttpResponse response) {
-                log.error("Error processing request");
-            }
+          @Override
+          public void handleError(ClientHttpResponse response) {
+            log.error("Error processing request");
+          }
         });
 
-        return restTemplate;
-    }
+    return restTemplate;
+  }
 
-    @Bean
-    public List<String> serverUrls() {
-        return List.of("http://localhost:8081");
-    }
+  @Bean
+  public BalancingAlgorithmService balancingAlgorithmService() {
+    return new RoundRobinImpl(List.of("http://localhost:8081"));
+  }
 }

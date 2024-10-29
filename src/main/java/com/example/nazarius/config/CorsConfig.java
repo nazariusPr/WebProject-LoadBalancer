@@ -8,13 +8,15 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import static com.example.nazarius.constants.Client.CLIENT_URL;
+
 @Configuration
 public class CorsConfig {
 
   @Bean
   public CorsFilter corsFilter() {
     CorsConfiguration config = new CorsConfiguration();
-    config.setAllowedOriginPatterns(List.of("http://localhost:9091"));
+    config.setAllowedOriginPatterns(List.of(CLIENT_URL));
     config.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"));
     config.setAllowedHeaders(
         Arrays.asList(

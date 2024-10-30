@@ -58,6 +58,7 @@ public class LoadBalancerImpl implements LoadBalancerService {
     String targetUrl = balancingAlgorithmService.getServerUrl();
 
     log.info("**/ Request sent to " + targetUrl);
+    log.info("**/ URI " + uri);
 
     return UriComponentsBuilder.fromHttpUrl(targetUrl)
         .path(uri.getPath())
